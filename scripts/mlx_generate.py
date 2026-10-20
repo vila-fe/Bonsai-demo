@@ -1,36 +1,34 @@
 """Streaming MLX generate with colored prompt and stats table."""
 import argparse
 import os
+from pathlib import Path
 import sys
 
 import mlx.core as mx
 from mlx_lm import load, stream_generate
 from mlx_lm.generate import make_sampler
+from runtime_config import RuntimeConfigError, load_effective_config
 
-_VALID_SIZES = ("8B", "4B", "1.7B")
-_VALID_FAMILIES = ("bonsai", "ternary")
+try:
+    _RUNTIME_CONFIG = load_effective_config(
+        Path(__file__).resolve().parents[1] / "config" / "runtime.yaml", os.environ
+    )
+except RuntimeConfigError as error:
+    sys.exit(f"runtime configuration error: {error}")
 
-_SIZE = os.environ.get("BONSAI_MODEL", "8B")
-_FAMILY = os.environ.get("BONSAI_FAMILY", "bonsai")
+_SIZE = _RUNTIME_CONFIG["BONSAI_MODEL"]
+_FAMILY = _RUNTIME_CONFIG["BONSAI_FAMILY"]
 
 if _FAMILY == "all":
     sys.exit(
         "BONSAI_FAMILY='all' is only valid for setup/download. "
         "Runtime requires a concrete family: bonsai or ternary."
     )
-if _FAMILY not in _VALID_FAMILIES:
-    sys.exit(
-        f"Unknown BONSAI_FAMILY={_FAMILY!r}. Valid values: bonsai, ternary"
-    )
 
 if _SIZE == "all":
     sys.exit(
         "BONSAI_MODEL='all' is only valid for setup/download. "
         "Runtime requires a concrete model size: 8B, 4B, or 1.7B."
-    )
-if _SIZE not in _VALID_SIZES:
-    sys.exit(
-        f"Unknown BONSAI_MODEL={_SIZE!r}. Valid values: 8B, 4B, 1.7B"
     )
 
 _DEFAULT_MODEL = (

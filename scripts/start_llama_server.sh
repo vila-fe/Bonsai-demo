@@ -1,7 +1,7 @@
 #!/bin/sh
 # Start an OpenAI-compatible chat server with the Bonsai model.
 # Usage: ./scripts/start_llama_server.sh
-# Then open http://localhost:8080 in your browser.
+# The configured endpoint is printed before the server starts.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -11,8 +11,8 @@ DEMO_DIR="$(resolve_demo_dir)"
 cd "$DEMO_DIR"
 assert_gguf_downloaded
 
-HOST="0.0.0.0"
-PORT=8080
+HOST="$BONSAI_LLAMA_HOST"
+PORT="$BONSAI_LLAMA_PORT"
 
 # ── Check port is free ──
 if curl -s --max-time 2 "http://localhost:$PORT/health" >/dev/null 2>&1; then

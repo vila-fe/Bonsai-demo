@@ -107,10 +107,6 @@ _version_ge() {
     return 0
 }
 
-# ── Model selection ──
-BONSAI_MODEL="${BONSAI_MODEL:-8B}"
-BONSAI_FAMILY="${BONSAI_FAMILY:-bonsai}"
-
 echo ""
 echo "========================================="
 echo "   Bonsai Demo Setup"

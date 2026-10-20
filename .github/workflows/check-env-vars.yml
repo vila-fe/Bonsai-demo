@@ -22,26 +22,36 @@ jobs:
         run: |
           sh -n scripts/common.sh
           sh -n scripts/download_models.sh
+          sh -n scripts/start_llama_server.sh
+          sh -n scripts/start_mlx_server.sh
+          sh -n scripts/start_openwebui.sh
           sh -n setup.sh
           echo "OK: shell scripts parse"
 
       - name: Python script syntax
         run: |
+          python3 -m py_compile scripts/runtime_config.py
           python3 -c "import ast; ast.parse(open('scripts/mlx_generate.py').read())"
-          echo "OK: mlx_generate.py parses"
+          echo "OK: Python scripts parse"
 
-      - name: PowerShell script syntax (setup.ps1)
+      - name: Canonical runtime configuration tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: PowerShell script syntax
         shell: pwsh
         run: |
-          $tokens = $null; $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path ./setup.ps1).Path, [ref]$tokens, [ref]$errors
-          ) | Out-Null
-          if ($errors -and $errors.Count -gt 0) {
-            $errors | ForEach-Object { Write-Host $_.Message }
-            exit 1
+          $files = @("./setup.ps1", "./scripts/start_llama_server.ps1")
+          foreach ($file in $files) {
+            $tokens = $null; $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $file).Path, [ref]$tokens, [ref]$errors
+            ) | Out-Null
+            if ($errors -and $errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Host $_.Message }
+              exit 1
+            }
           }
-          Write-Host "OK: setup.ps1 parses"
+          Write-Host "OK: PowerShell scripts parse"
 
       - name: Default resolves to Bonsai-8B (no env vars set)
         run: |

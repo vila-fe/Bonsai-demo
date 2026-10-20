@@ -119,6 +119,8 @@ Both variables are optional. **If you set neither, the default is `Bonsai-8B` (1
 
 `all` is only valid for `setup.sh` / `setup.ps1` / `download_models.sh` — the run/server scripts need a concrete family/size.
 
+The versioned defaults and server endpoint overrides are documented in [Runtime configuration](docs/runtime-configuration.md). The macOS/Linux scripts and the Windows llama-server script validate the merged YAML/environment configuration before running.
+
 Combine them freely:
 
 ```bash
@@ -391,9 +393,12 @@ Bonsai-demo/
 ├── README.md
 ├── setup.sh                        # macOS/Linux setup
 ├── setup.ps1                       # Windows setup
+├── config/
+│   └── runtime.yaml                 # Canonical model/server defaults
 ├── pyproject.toml                  # Python dependencies
 ├── scripts/
-│   ├── common.sh                   # Shared helpers + BONSAI_MODEL
+│   ├── common.sh                   # Shared helpers + runtime config loader
+│   ├── runtime_config.py            # Validated YAML reader + shell/JSON output
 │   ├── download_models.sh          # HuggingFace download
 │   ├── download_binaries.sh        # GitHub release download
 │   ├── run_llama.sh                # llama.cpp (auto-detects Mac/Linux)
