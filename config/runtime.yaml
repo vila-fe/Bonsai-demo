@@ -1,0 +1,14 @@
+# Canonical defaults for macOS/Linux setup, run, and server scripts.
+# Non-empty BONSAI_* environment variables override these values.
+model:
+  family: bonsai
+  size: 8B
+server:
+  llama:
+    host: 0.0.0.0
+    port: 8080
+  mlx:
+    port: 8081
+  openwebui:
+    port: 9090
+    max_port: 9099
