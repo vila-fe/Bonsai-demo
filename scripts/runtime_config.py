@@ -204,14 +204,19 @@ def load_effective_config(path: Path, environment: Mapping[str, str]) -> dict[st
             "BONSAI_OPENWEBUI_MAX_PORT must be greater than or equal to "
             "BONSAI_OPENWEBUI_PORT"
         )
-    endpoint_ports = (
-        ports["BONSAI_LLAMA_PORT"],
-        ports["BONSAI_MLX_PORT"],
-        ports["BONSAI_OPENWEBUI_PORT"],
-    )
-    if len(set(endpoint_ports)) != len(endpoint_ports):
+    for backend_port_name in ("BONSAI_LLAMA_PORT", "BONSAI_MLX_PORT"):
+        if (
+            ports["BONSAI_OPENWEBUI_PORT"]
+            <= ports[backend_port_name]
+            <= ports["BONSAI_OPENWEBUI_MAX_PORT"]
+        ):
+            raise RuntimeConfigError(
+                "BONSAI_OPENWEBUI_PORT range must not contain "
+                f"{backend_port_name}"
+            )
+    if ports["BONSAI_LLAMA_PORT"] == ports["BONSAI_MLX_PORT"]:
         raise RuntimeConfigError(
-            "BONSAI_LLAMA_PORT, BONSAI_MLX_PORT, and BONSAI_OPENWEBUI_PORT must differ"
+            "BONSAI_LLAMA_PORT and BONSAI_MLX_PORT must differ"
         )
 
     return values

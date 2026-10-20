@@ -1,7 +1,7 @@
 #!/bin/sh
 # Start MLX OpenAI-compatible server (Apple Silicon only).
 # Usage: ./scripts/start_mlx_server.sh
-# Listens on port 8081.
+# The configured port is printed before the server starts.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -18,7 +18,7 @@ fi
 assert_mlx_downloaded
 
 MODEL="$DEMO_DIR/$MLX_MODEL_DIR"
-PORT=8081
+PORT="$BONSAI_MLX_PORT"
 
 ensure_venv "$DEMO_DIR"
 

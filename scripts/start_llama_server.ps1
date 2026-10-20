@@ -1,23 +1,39 @@
 $ErrorActionPreference = "Stop"
 
-
-$BonsaiModel  = if ($env:BONSAI_MODEL)  { $env:BONSAI_MODEL.ToUpperInvariant() } else { "8B" }
-$BonsaiFamily = if ($env:BONSAI_FAMILY) { $env:BONSAI_FAMILY.ToLowerInvariant() } else { "bonsai" }
-
-if ($BonsaiModel -notin @("8B", "4B", "1.7B")) {
-    Write-Host "[ERR] Unknown BONSAI_MODEL='$BonsaiModel'. Valid values: 8B, 4B, 1.7B" -ForegroundColor Red
-    exit 1
-}
-if ($BonsaiFamily -notin @("bonsai", "ternary")) {
-    Write-Host "[ERR] Unknown BONSAI_FAMILY='$BonsaiFamily'. Valid values: bonsai, ternary" -ForegroundColor Red
-    exit 1
-}
-
 $DemoDir = Split-Path $PSScriptRoot -Parent
 Set-Location $DemoDir
 
-$HostAddress = "0.0.0.0"
-$Port = 8080
+$ConfigReader = Join-Path $PSScriptRoot "runtime_config.py"
+$VenvPython = Join-Path $DemoDir ".venv\Scripts\python.exe"
+if (Test-Path $VenvPython) {
+    $Python = $VenvPython
+} elseif (Get-Command python -ErrorAction SilentlyContinue) {
+    $Python = "python"
+} else {
+    Write-Host "[ERR] Python is required to load config\runtime.yaml. Run .\setup.ps1 first." -ForegroundColor Red
+    exit 1
+}
+
+$RuntimeConfigJson = & $Python $ConfigReader --json
+if ($LASTEXITCODE -ne 0) {
+    exit 1
+}
+try {
+    $RuntimeConfig = $RuntimeConfigJson | ConvertFrom-Json -ErrorAction Stop
+} catch {
+    Write-Host "[ERR] Could not parse runtime configuration emitted by $ConfigReader." -ForegroundColor Red
+    exit 1
+}
+
+$BonsaiModel = [string]$RuntimeConfig.BONSAI_MODEL
+$BonsaiFamily = [string]$RuntimeConfig.BONSAI_FAMILY
+if ($BonsaiModel -eq "all" -or $BonsaiFamily -eq "all") {
+    Write-Host "[ERR] BONSAI_FAMILY='all' / BONSAI_MODEL='all' is only valid for setup/download." -ForegroundColor Red
+    exit 1
+}
+
+$HostAddress = [string]$RuntimeConfig.BONSAI_LLAMA_HOST
+$Port = [int]$RuntimeConfig.BONSAI_LLAMA_PORT
 
 try {
     $null = Invoke-WebRequest -Uri "http://localhost:$Port/health" -TimeoutSec 2

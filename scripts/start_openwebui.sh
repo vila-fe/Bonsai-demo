@@ -4,7 +4,7 @@
 # Ctrl+C stops everything cleanly.
 #
 # Usage: ./scripts/start_openwebui.sh
-# Then open http://localhost:3001 in your browser.
+# The configured endpoint is printed once Open WebUI is ready.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -14,16 +14,16 @@ assert_gguf_downloaded
 DEMO_DIR="$(resolve_demo_dir)"
 cd "$DEMO_DIR"
 
-LLAMA_PORT=8080
-MLX_PORT=8081
+LLAMA_HOST="$BONSAI_LLAMA_HOST"
+LLAMA_PORT="$BONSAI_LLAMA_PORT"
+MLX_PORT="$BONSAI_MLX_PORT"
 BG_PIDS=""
 _LLAMA_PREEXISTING=false
 _MLX_PREEXISTING=false
 
-# ── Find a free port for Open WebUI ──
-# Use 9090+ range to avoid conflicts with Cursor port-forwarding and RunPod
-PORT=9090
-_max_port=9099
+# ── Find a free configured port for Open WebUI ──
+PORT="$BONSAI_OPENWEBUI_PORT"
+_max_port="$BONSAI_OPENWEBUI_MAX_PORT"
 while [ "$PORT" -le "$_max_port" ]; do
     if ! lsof -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
         break
@@ -31,7 +31,7 @@ while [ "$PORT" -le "$_max_port" ]; do
     PORT=$((PORT + 1))
 done
 if [ "$PORT" -gt "$_max_port" ]; then
-    err "No free port found in range 9090-$_max_port."
+    err "No free port found in range $BONSAI_OPENWEBUI_PORT-$_max_port."
     exit 1
 fi
 
@@ -86,7 +86,7 @@ else
         _bin_dir="$(cd "$(dirname "$_bin")" && pwd)"
         _ngl=$(bonsai_llama_ngl)
         LD_LIBRARY_PATH="$_bin_dir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-        "$_bin" -m "$_model" --host 0.0.0.0 --port "$LLAMA_PORT" -ngl "$_ngl" -c "$CTX_SIZE_DEFAULT" \
+        "$_bin" -m "$_model" --host "$LLAMA_HOST" --port "$LLAMA_PORT" -ngl "$_ngl" -c "$CTX_SIZE_DEFAULT" \
             --temp 0.5 --top-p 0.85 --top-k 20 --min-p 0 \
             --reasoning-budget 0 --reasoning-format none \
             --chat-template-kwargs '{"enable_thinking": false}' \

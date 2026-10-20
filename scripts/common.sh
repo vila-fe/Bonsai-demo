@@ -2,12 +2,48 @@
 # Shared helpers for Bonsai demo scripts.
 # Source this file: . "$(dirname "$0")/common.sh"
 
-# ── Model selection ──
-# Set BONSAI_MODEL to choose size:   8B (default), 4B, 1.7B, or all
-# Set BONSAI_FAMILY to choose family: bonsai (default, 1-bit), ternary (1.58-bit), or all
-# "all" is only meaningful for setup/download — it expands to every size / every family.
-BONSAI_MODEL="${BONSAI_MODEL:-8B}"
-BONSAI_FAMILY="${BONSAI_FAMILY:-bonsai}"
+# ── Canonical runtime configuration ──
+# config/runtime.yaml contains committed defaults. Non-empty BONSAI_* variables
+# override it. The helper validates the effective values before emitting only
+# safely quoted export statements for eval below.
+_load_runtime_config() {
+    if [ -n "${BONSAI_RUNTIME_CONFIG_HELPER:-}" ]; then
+        _runtime_config_helper="$BONSAI_RUNTIME_CONFIG_HELPER"
+    elif [ -n "${SCRIPT_DIR:-}" ] && [ -f "$SCRIPT_DIR/runtime_config.py" ]; then
+        _runtime_config_helper="$SCRIPT_DIR/runtime_config.py"
+    elif [ -n "${SCRIPT_DIR:-}" ] && [ -f "$SCRIPT_DIR/scripts/runtime_config.py" ]; then
+        _runtime_config_helper="$SCRIPT_DIR/scripts/runtime_config.py"
+    elif [ -f "scripts/runtime_config.py" ]; then
+        _runtime_config_helper="scripts/runtime_config.py"
+    else
+        printf '%s\n' "[ERR] runtime_config.py not found; cannot load config/runtime.yaml." >&2
+        return 1
+    fi
+
+    if ! command -v python3 >/dev/null 2>&1; then
+        printf '%s\n' "[ERR] python3 is required to load config/runtime.yaml." >&2
+        return 1
+    fi
+    _runtime_config_exports="$(
+        BONSAI_FAMILY="${BONSAI_FAMILY:-}" \
+        BONSAI_MODEL="${BONSAI_MODEL:-}" \
+        BONSAI_LLAMA_HOST="${BONSAI_LLAMA_HOST:-}" \
+        BONSAI_LLAMA_PORT="${BONSAI_LLAMA_PORT:-}" \
+        BONSAI_MLX_PORT="${BONSAI_MLX_PORT:-}" \
+        BONSAI_OPENWEBUI_PORT="${BONSAI_OPENWEBUI_PORT:-}" \
+        BONSAI_OPENWEBUI_MAX_PORT="${BONSAI_OPENWEBUI_MAX_PORT:-}" \
+        python3 "$_runtime_config_helper" --shell
+    )" || return 1
+    # shellcheck disable=SC2086
+    eval "$_runtime_config_exports"
+    unset _runtime_config_helper _runtime_config_exports
+}
+
+if ! _load_runtime_config; then
+    unset -f _load_runtime_config 2>/dev/null || true
+    return 1 2>/dev/null || exit 1
+fi
+unset -f _load_runtime_config 2>/dev/null || true
 
 # Derived paths default to empty so an invalid family or "all" never produces
 # a stale/glob-able path (e.g. `ls /*.gguf`). Concrete paths are only set when
@@ -37,22 +73,10 @@ case "$BONSAI_MODEL" in
     # Anything else, including "all": paths stay empty until validated.
 esac
 
-# Validate BONSAI_MODEL + BONSAI_FAMILY — call at the top of every run/server script
+# Configuration has already been validated by runtime_config.py while sourcing
+# this file. Keep this public no-op for compatibility with existing callers.
 assert_valid_model() {
-    case "$BONSAI_MODEL" in
-        8B|4B|1.7B|all) ;;
-        *)
-            err "Unknown BONSAI_MODEL='${BONSAI_MODEL}'. Valid values: 8B, 4B, 1.7B, all"
-            echo "  Example: export BONSAI_MODEL=8B"
-            exit 1 ;;
-    esac
-    case "$BONSAI_FAMILY" in
-        bonsai|ternary|all) ;;
-        *)
-            err "Unknown BONSAI_FAMILY='${BONSAI_FAMILY}'. Valid values: bonsai, ternary, all"
-            echo "  Example: export BONSAI_FAMILY=ternary"
-            exit 1 ;;
-    esac
+    :
 }
 
 # Reject invalid values and the download-only "all" at runtime with a clear
